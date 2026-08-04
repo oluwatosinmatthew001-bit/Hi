@@ -10,8 +10,8 @@ const readline = require('readline');
 const pino = require('pino');
 const HttpsProxyAgent = require('https-proxy-agent');
 const { SocksProxyAgent } = require('socks-proxy-agent');
-const chalk = require('chalk');
-
+const chalkModule = require('chalk');
+const chalk = chalkModule.default || chalkModule;
 // ============================================
 // CONFIGURATION
 // ============================================
