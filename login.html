@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LUNA — Secure Access</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0A0E21;
+      color: #E0E0E0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #12172B;
+      border: 1px solid #1A237E;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 0 40px rgba(26, 35, 126, 0.3);
+    }
+    .logo {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      color: #00BCD4;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+    .sub {
+      text-align: center;
+      color: #78909C;
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      background: #0A0E21;
+      border: 1px solid #263238;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 16px;
+      outline: none;
+    }
+    input:focus { border-color: #00BCD4; }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1A237E, #0D47A1);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    .error {
+      color: #FF8A80;
+      font-size: 13px;
+      text-align: center;
+      margin-top: 12px;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">LUNA</div>
+    <div class="sub">ANTI BUG PROTECTION — ADMIN</div>
+    <input type="password" id="code" placeholder="Access code" autofocus />
+    <button onclick="doLogin()">Authenticate</button>
+    <div class="error" id="err"></div>
+  </div>
+  <script>
+    async function doLogin() {
+      const code = document.getElementById('code').value.trim();
+      const err = document.getElementById('err');
+      err.textContent = '';
+      if (!code) { err.textContent = 'Enter code'; return; }
+      try {
+        const fd = new FormData();
+        fd.append('code', code);
+        const r = await fetch('/login', { method: 'POST', body: fd });
+        const j = await r.json();
+        if (!j.ok) { err.textContent = j.error || 'Invalid'; return; }
+        localStorage.setItem('luna_token', j.token);
+        localStorage.setItem('luna_admin', JSON.stringify(j.admin));
+        location.href = '/panel';
+      } catch (e) {
+        err.textContent = 'Connection error';
+      }
+    }
+    document.getElementById('code').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  </script>
+</body>
+</html>

